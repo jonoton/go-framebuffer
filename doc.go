@@ -1,13 +1,9 @@
-# go-framebuffer
-
+/*
 Package framebuffer provides a high-performance, concurrent-safe buffer for managing
 and re-timing streams of frames to a constant FPS output.
 
 It is designed for real-time video processing, streaming, or any application that
 needs to convert a variable-rate input stream into a smooth, fixed-rate output.
-
-[![Go Reference](https://pkg.go.dev/badge/github.com/jonoton/go-framebuffer.svg)](https://pkg.go.dev/github.com/jonoton/go-framebuffer)
-[![Go Report Card](https://goreportcard.com/badge/github.com/jonoton/go-framebuffer?)](https://goreportcard.com/report/github.com/jonoton/go-framebuffer)
 
 # Key Features
 
@@ -34,39 +30,39 @@ needs to convert a variable-rate input stream into a smooth, fixed-rate output.
 A producer goroutine adds frames to the buffer, and a consumer goroutine receives
 them from the output channel.
 
-```go
-// A simple frame type for the example.
-type MyFrame struct {
-  Timestamp time.Time
-}
+	// A simple frame type for the example.
+	type MyFrame struct {
+		Timestamp time.Time
+	}
 
-func (f *MyFrame) CreatedTime() time.Time {
-  return f.Timestamp
-}
+	func (f *MyFrame) CreatedTime() time.Time {
+		return f.Timestamp
+	}
 
-func main() {
-  ctx, cancel := context.WithCancel(context.Background())
-  defer cancel()
+	func main() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-  // Create a buffer to output at 30 FPS.
-  // Use WithDynamicDelay to let the buffer decide when to start playback.
-  b := framebuffer.NewBuffer[*MyFrame](ctx, 30, framebuffer.WithDynamicDelay[*MyFrame]())
-  defer b.Close()
+		// Create a buffer to output at 30 FPS.
+		// Use WithDynamicDelay to let the buffer decide when to start playback.
+		b := framebuffer.NewBuffer[*MyFrame](ctx, 30, framebuffer.WithDynamicDelay[*MyFrame]())
+		defer b.Close()
 
-  // Producer goroutine
-  go func() {
-    for {
-      // In a real application, you would get a frame from a source.
-      frame := &MyFrame{Timestamp: time.Now()}
-      b.AddFrame(frame)
-      time.Sleep(16 * time.Millisecond) // Simulate ~60 FPS input
-    }
-  }()
+		// Producer goroutine
+		go func() {
+			for {
+				// In a real application, you would get a frame from a source.
+				frame := &MyFrame{Timestamp: time.Now()}
+				b.AddFrame(frame)
+				time.Sleep(16 * time.Millisecond) // Simulate ~60 FPS input
+			}
+		}()
 
-  // Consumer goroutine
-  for outFrame := range b.Frames() {
-    fmt.Printf("Processing frame created at: %v\n", outFrame.CreatedTime())
-    // In a real application, you would encode or display the frame here.
-  }
-}
-```
+		// Consumer goroutine
+		for outFrame := range b.Frames() {
+			fmt.Printf("Processing frame created at: %v\n", outFrame.CreatedTime())
+			// In a real application, you would encode or display the frame here.
+		}
+	}
+*/
+package framebuffer
