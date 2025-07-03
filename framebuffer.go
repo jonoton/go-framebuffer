@@ -73,6 +73,7 @@ type Event struct {
 // Metrics holds performance counters for the Buffer, providing insight into its operation.
 type Metrics struct {
 	FramesIn           uint64 // Total frames received by the buffer.
+	FramesAccepted     uint64 // Total frames accepted by the buffer (not dropped by rate-limiter).
 	FramesOut          uint64 // Total frames sent from the buffer (real, duplicated, or interpolated).
 	FramesDropped      uint64 // Total frames dropped due to rate limiting or being stale.
 	FramesDuplicated   uint64 // Total frames duplicated to meet FPS.
@@ -338,12 +339,12 @@ func (b *Buffer[T]) process() {
 				continue
 			}
 			b.handlePresentationTick(lastSentPTS)
-			lastSentPTS = lastSentPTS.Add(b.fps) // Correctly and steadily advance the clock
+			lastSentPTS = lastSentPTS.Add(b.fps) // Always advance the clock steadily
 
 			if drainingDoneCh != nil {
 				b.mu.Lock()
-				// Drain is complete when all frames that have come in have also been sent out.
-				if b.metrics.FramesOut >= b.metrics.FramesIn {
+				// Drain is complete when all ACCEPTED frames have been sent.
+				if b.metrics.FramesOut >= b.metrics.FramesAccepted {
 					b.logger.Infof("Drain complete.")
 					b.emitEvent(EventDrainComplete, nil)
 					close(drainingDoneCh)
@@ -386,7 +387,8 @@ func (b *Buffer[T]) handleIncomingFrame(frame T) {
 		return
 	}
 
-	// This frame is kept, so advance the pacer for the next valid time.
+	// This frame is kept, so advance the pacer and increment the accepted count.
+	b.metrics.FramesAccepted++
 	b.nextKeepTime = b.nextKeepTime.Add(b.fps)
 	b.frames = append(b.frames, frame)
 	sort.Slice(b.frames, func(i, j int) bool {

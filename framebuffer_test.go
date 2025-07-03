@@ -380,6 +380,45 @@ func TestDrain(t *testing.T) {
 	}
 }
 
+func TestDrainWithDropping(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	b := NewBuffer[*TestFrame](ctx, 10)
+
+	var producerWg sync.WaitGroup
+	producerWg.Add(1)
+	go func() {
+		defer producerWg.Done()
+		startTime := time.Now()
+		// Send 20 frames at a rate faster than the buffer's FPS
+		for i := 0; i < 20; i++ {
+			b.AddFrame(&TestFrame{id: i, createdTime: startTime.Add(time.Duration(i*50) * time.Millisecond)})
+		}
+	}()
+	producerWg.Wait()
+
+	var consumerWg sync.WaitGroup
+	consumerWg.Add(1)
+	go func() {
+		defer consumerWg.Done()
+		for range b.Frames() {
+			// Consume all frames
+		}
+	}()
+
+	b.Drain()
+	b.Close()
+	consumerWg.Wait()
+
+	metrics := b.Metrics()
+	if metrics.FramesAccepted == 0 {
+		t.Fatal("No frames were accepted by the buffer")
+	}
+	if metrics.FramesOut < metrics.FramesAccepted {
+		t.Errorf("Drain completed before all accepted frames were sent. Out: %d, Accepted: %d", metrics.FramesOut, metrics.FramesAccepted)
+	}
+}
+
 func TestDynamicDelay(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
